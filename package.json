@@ -13,10 +13,12 @@
   "dependencies": {
     "discord.js": "^14.17.3",
     "dotenv": "^16.4.7",
-    "moment-timezone": "^0.5.46",
-    "undici": "^4.9.1"
+    "moment-timezone": "^0.5.46"
   },
   "engines": {
     "node": "18.x"
+  },
+  "overrides": {
+    "undici": "7.3.0"
   }
 }
