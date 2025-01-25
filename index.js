@@ -17,12 +17,12 @@ const token = process.env.DISCORD_TOKEN;
 // ID channel #absen
 const absenChannelId = "1332637422080757793"; // Ganti dengan ID channel Anda
 
+// Utility Functions
+const getTodayDate = () => moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
+
 // Menyimpan data absen
 let absen = {};
 let currentDate = getTodayDate();
-
-// Utility Functions
-const getTodayDate = () => moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
 
 const isAbsensiValid = () => {
   const now = moment().tz("Asia/Jakarta");
