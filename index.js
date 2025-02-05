@@ -56,47 +56,51 @@ const kirimNotifikasiAbsen = () => {
 
 // Handlers
 const handleAbsen = (message) => {
+  message.delete();
   if (isBeforeAbsensiTime()) {
-    return message.reply(
-      "⏳ **Silakan tunggu terlebih dahulu sampai jam 8 pagi** untuk melakukan absen! 😊"
+    return message.channel.send(
+      `⏳ **Silakan tunggu terlebih dahulu sampai jam 8 pagi** untuk melakukan absen! 😊`
     );
   }
 
   if (isAbsensiValid()) {
     absen[message.author.id] = { status: "Hadir", date: getTodayDate() };
-    message.reply(
-      "🎉 **Yeay!** Anda telah berhasil absen hadir! 🚀 Terima kasih sudah bergabung hari ini! 😊"
+    message.channel.send(
+      `🎉 **Yeay!** ${message.author} telah berhasil absen hadir! 🚀 Terima kasih sudah bergabung hari ini! 😊`
     );
   } else {
     absen[message.author.id] = { status: "Terlambat", date: getTodayDate() };
-    message.reply(
-      "⏰ **Oops!** Anda terlambat absen. Waktu absen sudah lewat, semoga bisa ikut di kesempatan berikutnya! 😔"
+    message.channel.send(
+      `⏰ **Oops!** ${message.author} terlambat absen. Waktu absen sudah lewat, semoga bisa ikut di kesempatan berikutnya! 😔`
     );
   }
 };
 
 const handleIzin = (message) => {
+  message.delete();
   const alasan = message.content.slice(5).trim();
   if (!alasan) {
-    return message.reply(
-      "❗ **Anda perlu memberikan alasan untuk izin.** Contoh: `!izin Tidak Bisa Hadir Karena Urusan Pribadi`."
+    return message.channel.send(
+      "❗ **Anda perlu memberikan alasan untuk izin.** Contoh: !izin Tidak Bisa Hadir Karena Urusan Pribadi."
     );
   }
 
   absen[message.author.id] = { status: "Izin", date: getTodayDate(), alasan };
-  message.reply(
-    `✅ **Terima kasih!** Anda telah mengajukan izin dengan alasan: *${alasan}*. Semoga semuanya berjalan lancar! 💪`
+  message.channel.send(
+    `✅ **Terima kasih!** ${message.author} telah mengajukan izin dengan alasan: *${alasan}*. Semoga semuanya berjalan lancar! 💪`
   );
 };
 
 const handleTidakHadir = (message) => {
+  message.delete();
   absen[message.author.id] = { status: "Tidak Hadir", date: getTodayDate() };
-  message.reply(
-    "😔 **Oh no!** Anda telah absen tidak hadir. Semoga bisa hadir lain waktu! 💭"
+  message.channel.send(
+    `😔 **Oh no!** ${message.author} telah absen tidak hadir. Semoga bisa hadir lain waktu! 💭`
   );
 };
 
 const handleCekAbsen = (message) => {
+  message.delete();
   const daftarAbsen =
     Object.entries(absen)
       .map(
@@ -106,7 +110,7 @@ const handleCekAbsen = (message) => {
           }`
       )
       .join("\n") || "Belum ada yang absen. Ayo, ikut absen sekarang! 😎";
-  message.reply(`📋 **Daftar Absen:**\n${daftarAbsen}`);
+  message.channel.send(`📋 **Daftar Absen:**\n${daftarAbsen}`);
 };
 
 // Event Listeners
@@ -139,8 +143,8 @@ client.on("messageCreate", (message) => {
 
   // Pastikan hanya di channel #absen
   if (message.channel.id !== absenChannelId) {
-    return message.reply(
-      "😡 **Awas!** Perintah absen hanya bisa dilakukan di channel **#absen**. Silakan pindah ke channel yang benar! ⚠️"
+    return message.channel.send(
+      `😡 **Awas!** ${message.author}, perintah absen hanya bisa dilakukan di channel **#absen**. Silakan pindah ke channel yang benar! ⚠️`
     );
   }
 
@@ -148,14 +152,10 @@ client.on("messageCreate", (message) => {
   resetAbsenJikaHariBerganti();
 
   // Menangani perintah
-  switch (true) {
-    case message.content === "!absen" && !absen[message.author.id]:
-      handleAbsen(message);
-      break;
-    case message.content === "!cekabsen":
-      handleCekAbsen(message);
-      break;
-  }
+  if (message.content.startsWith("!absen")) handleAbsen(message);
+  else if (message.content.startsWith("!izin")) handleIzin(message);
+  else if (message.content.startsWith("!tidakhadir")) handleTidakHadir(message);
+  else if (message.content.startsWith("!cekabsen")) handleCekAbsen(message);
 });
 
 // Login bot
