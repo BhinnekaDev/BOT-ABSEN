@@ -40,6 +40,20 @@ const resetAbsenJikaHariBerganti = () => {
   }
 };
 
+const kirimNotifikasiAbsen = () => {
+  const channel = client.channels.cache.get(absenChannelId);
+  if (channel) {
+    channel.send(
+      "⏳ **Perhatian!** Waktu absen akan dimulai dalam 10 menit (08:00 WIB). Jangan lupa untuk absen tepat waktu! 😊"
+    );
+    setTimeout(() => {
+      channel.send(
+        "⚠️ **Perhatian!** Waktu absen akan dimulai dalam 1 menit (08:00 WIB). Pastikan Anda tidak terlambat! ⏰"
+      );
+    }, 9 * 60 * 1000); // Kirim peringatan 1 menit sebelum absen dimulai
+  }
+};
+
 // Handlers
 const handleAbsen = (message) => {
   if (isBeforeAbsensiTime()) {
@@ -101,6 +115,18 @@ client.once("ready", () => {
 
   // Reset absen setiap jam
   setInterval(resetAbsenJikaHariBerganti, 60 * 60 * 1000); // Setiap 1 jam
+
+  // Kirim notifikasi 10 menit sebelum absen
+  const now = moment().tz("Asia/Jakarta");
+  const targetTime = moment().tz("Asia/Jakarta").hour(7).minute(50).second(0);
+  let delay = targetTime.diff(now);
+  if (delay < 0) {
+    delay += 24 * 60 * 60 * 1000;
+  }
+  setTimeout(() => {
+    kirimNotifikasiAbsen();
+    setInterval(kirimNotifikasiAbsen, 24 * 60 * 60 * 1000); // Kirim setiap hari
+  }, delay);
 });
 
 client.on("messageCreate", (message) => {
@@ -125,27 +151,6 @@ client.on("messageCreate", (message) => {
   switch (true) {
     case message.content === "!absen" && !absen[message.author.id]:
       handleAbsen(message);
-      break;
-    case message.content === "!absen":
-      message.reply(
-        "🔔 **Anda sudah absen hadir!** Terima kasih telah meluangkan waktu untuk hadir! 🙌"
-      );
-      break;
-    case message.content.startsWith("!izin") && !absen[message.author.id]:
-      handleIzin(message);
-      break;
-    case message.content === "!izin":
-      message.reply(
-        "🔔 **Anda sudah mengajukan izin!** Kami berharap Anda bisa hadir di kesempatan berikutnya! 🤞"
-      );
-      break;
-    case message.content === "!tidakhadir" && !absen[message.author.id]:
-      handleTidakHadir(message);
-      break;
-    case message.content === "!tidakhadir":
-      message.reply(
-        "⚠️ **Anda sudah absen tidak hadir!** Kami berharap Anda bisa hadir di kesempatan berikutnya! 🤞"
-      );
       break;
     case message.content === "!cekabsen":
       handleCekAbsen(message);
