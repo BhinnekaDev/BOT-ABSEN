@@ -39,6 +39,17 @@ const resetAbsenJikaHariBerganti = async () => {
     await kirimRekapAbsen(); // Kirim rekap sebelum reset
     currentDate = today;
     absen = {}; // Reset data absen
+
+    // Hapus semua pesan absen di channel
+    const channel = client.channels.cache.get(absenChannelId);
+    if (channel) {
+      const messages = await channel.messages.fetch({ limit: 100 }); // Fetch last 100 messages
+      messages.forEach(async (msg) => {
+        if (msg.author.bot) return; // Jangan hapus pesan dari bot
+        await msg.delete(); // Hapus pesan absen
+      });
+    }
+
     console.log("🔄 Data absen telah di-reset untuk hari baru:", currentDate);
   }
 };
