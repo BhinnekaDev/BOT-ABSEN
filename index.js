@@ -1,6 +1,8 @@
 require("dotenv").config();
 const moment = require("moment-timezone");
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
 
 // Setup client bot
 const client = new Client({
@@ -31,9 +33,10 @@ const isAbsensiValid = () => {
 
 const isBeforeAbsensiTime = () => moment().tz("Asia/Jakarta").hour() < 8; // Sebelum jam 8 pagi WIB
 
-const resetAbsenJikaHariBerganti = () => {
+const resetAbsenJikaHariBerganti = async () => {
   const today = getTodayDate();
   if (today !== currentDate) {
+    await kirimRekapAbsen(); // Kirim rekap sebelum reset
     currentDate = today;
     absen = {}; // Reset data absen
     console.log("🔄 Data absen telah di-reset untuk hari baru:", currentDate);
@@ -54,7 +57,6 @@ const kirimNotifikasiAbsen = () => {
   }
 };
 
-// Handlers
 const handleAbsen = (message) => {
   message.delete();
   if (isBeforeAbsensiTime()) {
@@ -113,12 +115,106 @@ const handleCekAbsen = (message) => {
   message.channel.send(`📋 **Daftar Absen:**\n${daftarAbsen}`);
 };
 
+// Fungsi untuk membuat PDF rekap absen
+const generatePDFRekap = () => {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50 });
+    const filePath = `rekap_absen_${currentDate}.pdf`;
+    const stream = fs.createWriteStream(filePath);
+
+    doc.pipe(stream);
+
+    // Header
+    doc.fillColor("#007bff").fontSize(20).text("Rekap Absen Harian", {
+      align: "center",
+    });
+    doc.moveDown(0.5);
+    doc.fillColor("black").fontSize(14).text(`Tanggal: ${currentDate}`, {
+      align: "center",
+    });
+
+    // Garis pemisah
+    doc.moveDown(0.5);
+    doc
+      .strokeColor("#007bff")
+      .lineWidth(2)
+      .moveTo(50, doc.y)
+      .lineTo(550, doc.y)
+      .stroke();
+    doc.moveDown(1);
+
+    if (Object.keys(absen).length === 0) {
+      doc.fontSize(12).text("⚠️ Belum ada data absen hari ini.", {
+        align: "center",
+      });
+    } else {
+      // Tabel Absen
+      doc.fontSize(12).text("📌 Daftar Kehadiran:", { underline: true });
+      doc.moveDown(0.5);
+
+      Object.entries(absen).forEach(([id, data], index) => {
+        // Alternating row color
+        if (index % 2 === 0) {
+          doc
+            .rect(50, doc.y - 2, 500, 20)
+            .fill("#f0f0f0")
+            .stroke();
+        }
+        doc.fillColor("black");
+
+        doc.text(
+          `👤 ${id} | 📅 ${data.date} | ✅ Status: ${data.status} ${
+            data.alasan ? `| 📝 Alasan: ${data.alasan}` : ""
+          }`,
+          55,
+          doc.y + 3
+        );
+        doc.moveDown();
+      });
+    }
+
+    // Footer
+    doc.moveDown(2);
+    doc
+      .fillColor("#555")
+      .fontSize(10)
+      .text("📄 Laporan ini dibuat secara otomatis oleh sistem.", {
+        align: "center",
+      });
+
+    doc.end();
+
+    stream.on("finish", () => resolve(filePath));
+    stream.on("error", (err) => reject(err));
+  });
+};
+
+// Kirim rekap absen ke channel
+const kirimRekapAbsen = async () => {
+  const channel = client.channels.cache.get(absenChannelId);
+  if (!channel) return;
+
+  try {
+    const pdfPath = await generatePDFRekap();
+    const attachment = new AttachmentBuilder(pdfPath);
+    await channel.send({
+      content: `📌 **Rekap Absen Hari ${currentDate}**\nBerikut adalah laporan absen harian dalam bentuk PDF.`,
+      files: [attachment],
+    });
+
+    // Hapus file setelah dikirim
+    fs.unlinkSync(pdfPath);
+  } catch (error) {
+    console.error("Gagal membuat/mengirim PDF:", error);
+  }
+};
+
 // Event Listeners
 client.once("ready", () => {
   console.log("Bot siap!");
 
-  // Reset absen setiap jam
-  setInterval(resetAbsenJikaHariBerganti, 60 * 60 * 1000); // Setiap 1 jam
+  // Reset absen setiap jam dan kirim rekap
+  setInterval(resetAbsenJikaHariBerganti, 60 * 60 * 1000);
 
   // Kirim notifikasi 10 menit sebelum absen
   const now = moment().tz("Asia/Jakarta");
@@ -129,34 +225,20 @@ client.once("ready", () => {
   }
   setTimeout(() => {
     kirimNotifikasiAbsen();
-    setInterval(kirimNotifikasiAbsen, 24 * 60 * 60 * 1000); // Kirim setiap hari
+    setInterval(kirimNotifikasiAbsen, 24 * 60 * 60 * 1000);
   }, delay);
 });
 
 client.on("messageCreate", (message) => {
   if (message.author.bot) return;
+  if (message.channel.id !== absenChannelId) return;
 
-  // Periksa perintah absen yang diizinkan
-  const allowedCommands = ["!absen", "!izin", "!tidakhadir", "!cekabsen"];
-  if (!allowedCommands.some((command) => message.content.startsWith(command)))
-    return;
-
-  // Pastikan hanya di channel #absen
-  if (message.channel.id !== absenChannelId) {
-    return message.channel.send(
-      `😡 **Awas!** ${message.author}, perintah absen hanya bisa dilakukan di channel **#absen**. Silakan pindah ke channel yang benar! ⚠️`
-    );
-  }
-
-  // Reset data absen jika hari sudah berganti
   resetAbsenJikaHariBerganti();
 
-  // Menangani perintah
   if (message.content.startsWith("!absen")) handleAbsen(message);
   else if (message.content.startsWith("!izin")) handleIzin(message);
   else if (message.content.startsWith("!tidakhadir")) handleTidakHadir(message);
   else if (message.content.startsWith("!cekabsen")) handleCekAbsen(message);
 });
 
-// Login bot
 client.login(token);

@@ -13,7 +13,8 @@
   "dependencies": {
     "discord.js": "^14.17.3",
     "dotenv": "^16.4.7",
-    "moment-timezone": "^0.5.46"
+    "moment-timezone": "^0.5.47",
+    "pdfkit": "^0.16.0"
   },
   "engines": {
     "node": "18.x"
