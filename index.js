@@ -44,11 +44,11 @@ const kirimNotifikasiAbsen = () => {
   const channel = client.channels.cache.get(absenChannelId);
   if (channel) {
     channel.send(
-      "⏳ **Perhatian!** Waktu absen akan dimulai dalam 10 menit (08:00 WIB). Jangan lupa untuk absen tepat waktu! 😊"
+      "@everyone ⏳ **Perhatian!** Waktu absen akan dimulai dalam 10 menit (08:00 WIB). Jangan lupa untuk absen tepat waktu! 😊"
     );
     setTimeout(() => {
       channel.send(
-        "⚠️ **Perhatian!** Waktu absen akan dimulai dalam 1 menit (08:00 WIB). Pastikan Anda tidak terlambat! ⏰"
+        "@everyone ⚠️ **Perhatian!** Waktu absen akan dimulai dalam 1 menit (08:00 WIB). Pastikan Anda tidak terlambat! ⏰"
       );
     }, 9 * 60 * 1000); // Kirim peringatan 1 menit sebelum absen dimulai
   }
