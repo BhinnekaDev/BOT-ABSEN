@@ -157,7 +157,6 @@ const kirimRekapAbsen = async () => {
   try {
     const pdfFilePath = await generatePDFRekap();
 
-    // Pastikan file ada sebelum dikirim
     if (!fs.existsSync(pdfFilePath)) {
       console.error("❌ File PDF tidak ditemukan.");
       return;
@@ -169,10 +168,10 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    // **Gunakan Stream untuk membaca file sebelum dikirim**
-    const fileStream = fs.createReadStream(pdfFilePath);
+    // **Baca file sebagai buffer**
+    const pdfBuffer = fs.readFileSync(pdfFilePath);
 
-    const attachment = new AttachmentBuilder(fileStream, {
+    const attachment = new AttachmentBuilder(pdfBuffer, {
       name: `rekap_absen_${currentDate}.pdf`,
     });
 
