@@ -157,6 +157,7 @@ const kirimRekapAbsen = async () => {
   try {
     const pdfFilePath = await generatePDFRekap();
 
+    // Pastikan file ada
     if (!fs.existsSync(pdfFilePath)) {
       console.error("❌ File PDF tidak ditemukan.");
       return;
@@ -168,13 +169,14 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    // **Baca file sebagai buffer**
-    const pdfBuffer = fs.readFileSync(pdfFilePath);
+    // Baca file PDF sebagai buffer
+    const pdfBuffer = await fs.promises.readFile(pdfFilePath);
 
     const attachment = new AttachmentBuilder(pdfBuffer, {
       name: `rekap_absen_${currentDate}.pdf`,
     });
 
+    // Kirim file PDF ke channel Discord
     await channel.send({
       content: "📄 **Berikut adalah rekap absen hari ini:**",
       files: [attachment],
@@ -182,7 +184,7 @@ const kirimRekapAbsen = async () => {
 
     console.log("✅ Rekap absen berhasil dikirim.");
 
-    // **Hapus file setelah dikirim**
+    // Hapus file setelah dikirim
     fs.unlink(pdfFilePath, (err) => {
       if (err) console.error("❌ Gagal menghapus file:", err);
       else console.log("🗑️ File PDF dihapus setelah dikirim.");
