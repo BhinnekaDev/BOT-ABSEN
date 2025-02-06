@@ -203,20 +203,25 @@ const generatePDFRekap = () => {
 // Kirim rekap absen ke channel
 const kirimRekapAbsen = async () => {
   const channel = client.channels.cache.get(absenChannelId);
-  if (!channel) return;
+  if (!channel) return console.error("❌ Channel tidak ditemukan!");
 
   try {
     const pdfPath = await generatePDFRekap();
-    const attachment = new AttachmentBuilder(pdfPath);
+    const attachment = new AttachmentBuilder(pdfPath, {
+      name: `rekap_absen_${currentDate}.pdf`,
+    });
+
     await channel.send({
       content: `📌 **Rekap Absen Hari ${currentDate}**\nBerikut adalah laporan absen harian dalam bentuk PDF.`,
       files: [attachment],
     });
 
-    // Hapus file setelah dikirim
+    console.log(`✅ Rekap absen untuk ${currentDate} berhasil dikirim.`);
+
+    // Hapus file setelah dikirim untuk menghindari penyimpanan yang tidak perlu
     fs.unlinkSync(pdfPath);
   } catch (error) {
-    console.error("Gagal membuat/mengirim PDF:", error);
+    console.error("❌ Gagal membuat/mengirim PDF:", error);
   }
 };
 
