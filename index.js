@@ -114,12 +114,13 @@ const handleCekAbsen = (message) => {
 };
 
 // Fungsi untuk membuat PDF rekap absen
-const generatePDFRekap = () => {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument();
-    const filePath = `rekap_absen_${currentDate}.pdf`;
-    const stream = fs.createWriteStream(filePath);
+const generatePDFRekap = async () => {
+  const doc = new PDFDocument();
+  const filePath = `/tmp/rekap_absen_${currentDate}.pdf`; // Temporary directory for Railway
 
+  // Use promises for file handling
+  await new Promise((resolve, reject) => {
+    const stream = fs.createWriteStream(filePath);
     doc.pipe(stream);
 
     // Header PDF
@@ -140,16 +141,11 @@ const generatePDFRekap = () => {
 
     doc.end();
 
-    stream.on("finish", () => {
-      console.log(`✅ PDF berhasil dibuat: ${filePath}`);
-      resolve(filePath);
-    });
-
-    stream.on("error", (err) => {
-      console.error("❌ Gagal membuat PDF:", err);
-      reject(err);
-    });
+    stream.on("finish", resolve);
+    stream.on("error", reject);
   });
+
+  return filePath; // Return path to the generated file
 };
 
 // Kirim rekap absen ke channel
@@ -157,7 +153,7 @@ const kirimRekapAbsen = async () => {
   try {
     const pdfFilePath = await generatePDFRekap();
 
-    // Pastikan file ada
+    // Check if the file exists
     if (!fs.existsSync(pdfFilePath)) {
       console.error("❌ File PDF tidak ditemukan.");
       return;
@@ -169,14 +165,14 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    // Baca file PDF sebagai buffer
+    // Read file as buffer
     const pdfBuffer = await fs.promises.readFile(pdfFilePath);
 
     const attachment = new AttachmentBuilder(pdfBuffer, {
       name: `rekap_absen_${currentDate}.pdf`,
     });
 
-    // Kirim file PDF ke channel Discord
+    // Send file
     await channel.send({
       content: "📄 **Berikut adalah rekap absen hari ini:**",
       files: [attachment],
@@ -184,7 +180,7 @@ const kirimRekapAbsen = async () => {
 
     console.log("✅ Rekap absen berhasil dikirim.");
 
-    // Hapus file setelah dikirim
+    // Clean up: remove the file
     fs.unlink(pdfFilePath, (err) => {
       if (err) console.error("❌ Gagal menghapus file:", err);
       else console.log("🗑️ File PDF dihapus setelah dikirim.");
