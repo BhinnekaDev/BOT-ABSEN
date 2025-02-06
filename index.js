@@ -183,23 +183,24 @@ const kirimRekapAbsen = async () => {
   try {
     const pdfPath = await generatePDFRekap();
 
+    // Verifikasi bahwa file PDF berhasil dibuat dan dapat diakses
     if (!fs.existsSync(pdfPath)) {
       console.error("❌ File PDF tidak ditemukan!");
       return;
     }
 
-    const attachment = new AttachmentBuilder(fs.readFileSync(pdfPath), {
+    // Gunakan fs.createReadStream untuk membaca file PDF
+    const attachment = new AttachmentBuilder(fs.createReadStream(pdfPath), {
       name: `rekap_absen_${currentDate}.pdf`,
     });
 
+    // Kirim pesan dengan attachment (file PDF)
     await channel.send({
       content: `📌 **Rekap Absen Hari ${currentDate}**\nBerikut adalah laporan absen harian dalam bentuk PDF.`,
       files: [attachment],
     });
 
     console.log(`✅ Rekap absen untuk ${currentDate} berhasil dikirim.`);
-
-    fs.unlinkSync(pdfPath);
   } catch (error) {
     console.error("❌ Gagal membuat/mengirim PDF:", error);
   }
