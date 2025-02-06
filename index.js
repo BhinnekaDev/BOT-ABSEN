@@ -177,32 +177,29 @@ const generatePDFRekap = () => {
 
 // Kirim rekap absen ke channel
 const kirimRekapAbsen = async () => {
-  const channel = client.channels.cache.get(absenChannelId);
-  if (!channel) return console.error("❌ Channel tidak ditemukan!");
-
   try {
-    const pdfPath = await generatePDFRekap();
+    // Membuat PDF rekap absen
+    const pdfFilePath = await generatePDFRekap();
 
-    // Verifikasi bahwa file PDF berhasil dibuat dan dapat diakses
-    if (!fs.existsSync(pdfPath)) {
-      console.error("❌ File PDF tidak ditemukan!");
-      return;
+    // Membaca file PDF yang telah dibuat
+    const pdfFile = fs.readFileSync(pdfFilePath);
+
+    // Mengirim PDF ke channel
+    const channel = client.channels.cache.get(absenChannelId);
+    if (channel) {
+      const attachment = new AttachmentBuilder(pdfFile, {
+        name: `rekap_absen_${currentDate}.pdf`,
+      });
+      await channel.send({
+        content: "📄 **Berikut adalah rekap absen hari ini:**",
+        files: [attachment],
+      });
+      console.log("✅ Rekap absen berhasil dikirim.");
+    } else {
+      console.error("❌ Gagal mendapatkan channel.");
     }
-
-    // Gunakan fs.createReadStream untuk membaca file PDF
-    const attachment = new AttachmentBuilder(fs.createReadStream(pdfPath), {
-      name: `rekap_absen_${currentDate}.pdf`,
-    });
-
-    // Kirim pesan dengan attachment (file PDF)
-    await channel.send({
-      content: `📌 **Rekap Absen Hari ${currentDate}**\nBerikut adalah laporan absen harian dalam bentuk PDF.`,
-      files: [attachment],
-    });
-
-    console.log(`✅ Rekap absen untuk ${currentDate} berhasil dikirim.`);
   } catch (error) {
-    console.error("❌ Gagal membuat/mengirim PDF:", error);
+    console.error("❌ Gagal mengirim rekap absen:", error);
   }
 };
 
