@@ -27,8 +27,7 @@ let absen = {};
 let currentDate = getTodayDate();
 
 const isAbsensiValid = () => {
-  const now = moment().tz("Asia/Jakarta");
-  return now.hour() >= 8 && now.hour() < 9; // Absensi valid antara jam 8 hingga 9 pagi WIB
+  return true;
 };
 
 const isBeforeAbsensiTime = () => moment().tz("Asia/Jakarta").hour() < 8; // Sebelum jam 8 pagi WIB
@@ -39,18 +38,6 @@ const resetAbsenJikaHariBerganti = async () => {
     await kirimRekapAbsen(); // Kirim rekap sebelum reset
     currentDate = today;
     absen = {}; // Reset data absen
-
-    // Hapus semua pesan absen di channel
-    const channel = client.channels.cache.get(absenChannelId);
-    if (channel) {
-      const messages = await channel.messages.fetch({ limit: 100 }); // Fetch last 100 messages
-      messages.forEach(async (msg) => {
-        if (msg.author.bot) return; // Jangan hapus pesan dari bot
-        await msg.delete(); // Hapus pesan absen
-      });
-    }
-
-    console.log("🔄 Data absen telah di-reset untuk hari baru:", currentDate);
   }
 };
 
@@ -144,14 +131,6 @@ const generatePDFRekap = () => {
       align: "center",
     });
 
-    // Garis pemisah
-    doc.moveDown(0.5);
-    doc
-      .strokeColor("#007bff")
-      .lineWidth(2)
-      .moveTo(50, doc.y)
-      .lineTo(550, doc.y)
-      .stroke();
     doc.moveDown(1);
 
     if (Object.keys(absen).length === 0) {
@@ -159,12 +138,10 @@ const generatePDFRekap = () => {
         align: "center",
       });
     } else {
-      // Tabel Absen
       doc.fontSize(12).text("📌 Daftar Kehadiran:", { underline: true });
       doc.moveDown(0.5);
 
       Object.entries(absen).forEach(([id, data], index) => {
-        // Alternating row color
         if (index % 2 === 0) {
           doc
             .rect(50, doc.y - 2, 500, 20)
@@ -184,19 +161,17 @@ const generatePDFRekap = () => {
       });
     }
 
-    // Footer
-    doc.moveDown(2);
-    doc
-      .fillColor("#555")
-      .fontSize(10)
-      .text("📄 Laporan ini dibuat secara otomatis oleh sistem.", {
-        align: "center",
-      });
-
     doc.end();
 
-    stream.on("finish", () => resolve(filePath));
-    stream.on("error", (err) => reject(err));
+    stream.on("finish", () => {
+      console.log("✅ PDF berhasil dibuat:", filePath);
+      resolve(filePath);
+    });
+
+    stream.on("error", (err) => {
+      console.error("❌ Gagal membuat PDF:", err);
+      reject(err);
+    });
   });
 };
 
@@ -207,6 +182,12 @@ const kirimRekapAbsen = async () => {
 
   try {
     const pdfPath = await generatePDFRekap();
+
+    if (!fs.existsSync(pdfPath)) {
+      console.error("❌ File PDF tidak ditemukan!");
+      return;
+    }
+
     const attachment = new AttachmentBuilder(pdfPath, {
       name: `rekap_absen_${currentDate}.pdf`,
     });
@@ -254,6 +235,17 @@ client.on("messageCreate", (message) => {
   else if (message.content.startsWith("!izin")) handleIzin(message);
   else if (message.content.startsWith("!tidakhadir")) handleTidakHadir(message);
   else if (message.content.startsWith("!cekabsen")) handleCekAbsen(message);
+  else if (message.content.startsWith("!rekap")) {
+    if (!message.member.permissions.has("ADMINISTRATOR")) {
+      return message.channel.send(
+        "❌ **Hanya admin yang bisa menjalankan perintah ini!**"
+      );
+    }
+    kirimRekapAbsen();
+    message.channel.send(
+      "📄 **Rekap absen sedang diproses dan akan dikirim segera!**"
+    );
+  }
 });
 
 client.login(token);
