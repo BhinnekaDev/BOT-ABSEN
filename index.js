@@ -30,7 +30,7 @@ const isAbsensiValid = () => {
   return true;
 };
 
-const isBeforeAbsensiTime = () => moment().tz("Asia/Jakarta").hour() < 8; // Sebelum jam 8 pagi WIB
+const isBeforeAbsensiTime = () => false; // Sebelum jam 8 pagi WIB
 
 const resetAbsenJikaHariBerganti = async () => {
   const today = getTodayDate();
