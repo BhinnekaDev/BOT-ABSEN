@@ -188,7 +188,7 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    const attachment = new AttachmentBuilder(pdfPath, {
+    const attachment = new AttachmentBuilder(fs.readFileSync(pdfPath), {
       name: `rekap_absen_${currentDate}.pdf`,
     });
 
