@@ -115,31 +115,29 @@ const handleCekAbsen = (message) => {
 
 // Fungsi untuk membuat PDF rekap absen
 const generatePDFRekap = async () => {
+  if (Object.keys(absen).length === 0) {
+    console.log("❌ Tidak ada data absen hari ini. PDF tidak akan dibuat.");
+    return null; // Jangan lanjutkan jika tidak ada data
+  }
+
   try {
     const doc = new PDFDocument();
-    const filePath = `./rekap_absen_${currentDate}.pdf`; // Simpan di root folder bot
-
-    console.log("📄 Membuat file PDF di:", filePath);
+    const filePath = `./rekap_absen_${currentDate}.pdf`;
 
     await new Promise((resolve, reject) => {
       const stream = fs.createWriteStream(filePath);
       doc.pipe(stream);
 
-      // Header PDF
       doc.fontSize(18).text("Rekap Absen Harian", { align: "center" });
       doc.moveDown();
       doc.fontSize(14).text(`Tanggal: ${currentDate}`, { align: "center" });
       doc.moveDown();
 
-      if (Object.keys(absen).length === 0) {
-        doc.text("Belum ada data absen hari ini.", { align: "center" });
-      } else {
-        Object.entries(absen).forEach(([id, data]) => {
-          doc.text(
-            `- ${id}: ${data.status} ${data.alasan ? `(${data.alasan})` : ""}`
-          );
-        });
-      }
+      Object.entries(absen).forEach(([id, data]) => {
+        doc.text(
+          `- <@${id}>: ${data.status} ${data.alasan ? `(${data.alasan})` : ""}`
+        );
+      });
 
       doc.end();
 
@@ -164,27 +162,25 @@ const generatePDFRekap = async () => {
 // Kirim rekap absen ke channel
 const kirimRekapAbsen = async () => {
   try {
-    const pdfFilePath = await generatePDFRekap(); // Generate PDF
+    const pdfFilePath = await generatePDFRekap();
 
-    // Cek apakah file berhasil dibuat
-    if (!pdfFilePath || !fs.existsSync(pdfFilePath)) {
-      console.error("❌ File PDF tidak ditemukan atau gagal dibuat.");
+    if (!pdfFilePath) {
+      console.error("❌ PDF tidak dibuat karena tidak ada data absen.");
       return;
     }
 
-    console.log("✅ File PDF ditemukan:", pdfFilePath);
+    if (!fs.existsSync(pdfFilePath)) {
+      console.error("❌ File PDF tidak ditemukan.");
+      return;
+    }
 
-    // Membaca file sebagai buffer dengan metode yang lebih aman
     const pdfBuffer = fs.readFileSync(pdfFilePath);
-
-    // Pastikan buffer tidak kosong
     if (!pdfBuffer || pdfBuffer.length === 0) {
       console.error("❌ File PDF kosong atau gagal dibaca.");
       return;
     }
 
-    // Gunakan Buffer.from() agar data selalu valid
-    const attachment = new AttachmentBuilder(Buffer.from(pdfBuffer), {
+    const attachment = new AttachmentBuilder(pdfBuffer, {
       name: `rekap_absen_${currentDate}.pdf`,
     });
 
@@ -194,7 +190,6 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    // Kirim file ke channel
     await channel.send({
       content: "📄 **Berikut adalah rekap absen hari ini:**",
       files: [attachment],
@@ -202,7 +197,6 @@ const kirimRekapAbsen = async () => {
 
     console.log("✅ Rekap absen berhasil dikirim.");
 
-    // Hapus file setelah dikirim
     fs.unlink(pdfFilePath, (err) => {
       if (err) console.error("❌ Gagal menghapus file:", err);
       else console.log("🗑️ File PDF dihapus setelah dikirim.");
