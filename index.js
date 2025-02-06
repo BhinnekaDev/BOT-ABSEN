@@ -163,36 +163,33 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    // Baca file sebagai buffer
-    const pdfBuffer = await fs.promises.readFile(pdfFilePath);
-
-    // Pastikan buffer tidak kosong
-    if (!pdfBuffer || pdfBuffer.length === 0) {
-      console.error("❌ File PDF kosong atau gagal dibaca.");
+    const channel = client.channels.cache.get(absenChannelId);
+    if (!channel) {
+      console.error("❌ Gagal mendapatkan channel.");
       return;
     }
 
-    // Kirim file ke channel Discord
-    const channel = client.channels.cache.get(absenChannelId);
-    if (channel) {
-      const attachment = new AttachmentBuilder(pdfBuffer, {
-        name: `rekap_absen_${currentDate}.pdf`,
-      });
+    // **🔹 SOLUSI 1: Tambahkan delay sebelum membaca file**
+    setTimeout(async () => {
+      try {
+        // **🔹 SOLUSI 2: Kirim file sebagai path langsung, bukan buffer**
+        const attachment = new AttachmentBuilder(pdfFilePath);
 
-      await channel.send({
-        content: "📄 **Berikut adalah rekap absen hari ini:**",
-        files: [attachment],
-      });
+        await channel.send({
+          content: "📄 **Berikut adalah rekap absen hari ini:**",
+          files: [attachment],
+        });
 
-      console.log("✅ Rekap absen berhasil dikirim.");
+        console.log("✅ Rekap absen berhasil dikirim.");
 
-      // Hapus file setelah dikirim untuk menghindari penumpukan file
-      await fs.promises.unlink(pdfFilePath);
-    } else {
-      console.error("❌ Gagal mendapatkan channel.");
-    }
+        // **Hapus file setelah dikirim**
+        await fs.promises.unlink(pdfFilePath);
+      } catch (err) {
+        console.error("❌ Gagal mengirim file:", err);
+      }
+    }, 1000); // **Delay 1 detik untuk memastikan file selesai dibuat**
   } catch (error) {
-    console.error("❌ Gagal mengirim rekap absen:", error);
+    console.error("❌ Gagal membuat rekap absen:", error);
   }
 };
 
