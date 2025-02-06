@@ -169,11 +169,18 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    // **🔹 SOLUSI 1: Tambahkan delay sebelum membaca file**
-    setTimeout(async () => {
+    // **SOLUSI: Gunakan fs.readFile untuk memastikan file bisa diakses**
+    fs.readFile(pdfFilePath, async (err, data) => {
+      if (err) {
+        console.error("❌ Gagal membaca file PDF:", err);
+        return;
+      }
+
       try {
-        // **🔹 SOLUSI 2: Kirim file sebagai path langsung, bukan buffer**
-        const attachment = new AttachmentBuilder(pdfFilePath);
+        // Kirim file dengan path langsung
+        const attachment = new AttachmentBuilder(pdfFilePath, {
+          name: `rekap_absen_${currentDate}.pdf`,
+        });
 
         await channel.send({
           content: "📄 **Berikut adalah rekap absen hari ini:**",
@@ -184,10 +191,10 @@ const kirimRekapAbsen = async () => {
 
         // **Hapus file setelah dikirim**
         await fs.promises.unlink(pdfFilePath);
-      } catch (err) {
-        console.error("❌ Gagal mengirim file:", err);
+      } catch (sendError) {
+        console.error("❌ Gagal mengirim file:", sendError);
       }
-    }, 1000); // **Delay 1 detik untuk memastikan file selesai dibuat**
+    });
   } catch (error) {
     console.error("❌ Gagal membuat rekap absen:", error);
   }
