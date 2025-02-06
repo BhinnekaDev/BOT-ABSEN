@@ -157,7 +157,7 @@ const kirimRekapAbsen = async () => {
   try {
     const pdfFilePath = await generatePDFRekap();
 
-    // Pastikan file benar-benar ada sebelum mengirim
+    // Pastikan file ada sebelum dikirim
     if (!fs.existsSync(pdfFilePath)) {
       console.error("❌ File PDF tidak ditemukan.");
       return;
@@ -169,14 +169,10 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    // **SOLUSI: Gunakan Buffer untuk membaca file sebelum dikirim**
-    const fileBuffer = fs.readFileSync(pdfFilePath);
-    if (!fileBuffer || fileBuffer.length === 0) {
-      console.error("❌ File PDF kosong atau gagal dibaca.");
-      return;
-    }
+    // **Gunakan Stream untuk membaca file sebelum dikirim**
+    const fileStream = fs.createReadStream(pdfFilePath);
 
-    const attachment = new AttachmentBuilder(fileBuffer, {
+    const attachment = new AttachmentBuilder(fileStream, {
       name: `rekap_absen_${currentDate}.pdf`,
     });
 
@@ -188,7 +184,10 @@ const kirimRekapAbsen = async () => {
     console.log("✅ Rekap absen berhasil dikirim.");
 
     // **Hapus file setelah dikirim**
-    await fs.promises.unlink(pdfFilePath);
+    fs.unlink(pdfFilePath, (err) => {
+      if (err) console.error("❌ Gagal menghapus file:", err);
+      else console.log("🗑️ File PDF dihapus setelah dikirim.");
+    });
   } catch (error) {
     console.error("❌ Gagal mengirim file:", error);
   }
