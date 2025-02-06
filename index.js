@@ -176,17 +176,6 @@ client.on("messageCreate", (message) => {
   else if (message.content.startsWith("!izin")) handleIzin(message);
   else if (message.content.startsWith("!tidakhadir")) handleTidakHadir(message);
   else if (message.content.startsWith("!cekabsen")) handleCekAbsen(message);
-  else if (message.content.startsWith("!rekap")) {
-    if (!message.member.permissions.has("ADMINISTRATOR")) {
-      return message.channel.send(
-        "❌ **Hanya admin yang bisa menjalankan perintah ini!**"
-      );
-    }
-    kirimRekapAbsen();
-    message.channel.send(
-      "📄 **Rekap absen sedang diproses dan akan dikirim segera!**"
-    );
-  }
 });
 
 client.login(token);
