@@ -1,8 +1,8 @@
 require("dotenv").config();
 const moment = require("moment-timezone");
 const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
-const PDFDocument = require("pdfkit");
 const fs = require("fs");
+const XLSX = require("xlsx");
 
 // Setup client bot
 const client = new Client({
@@ -114,47 +114,42 @@ const handleCekAbsen = (message) => {
 };
 
 // Fungsi untuk membuat PDF rekap absen
-const generatePDFRekap = async () => {
+const generateExcelRekap = async () => {
   if (Object.keys(absen).length === 0) {
-    console.log("❌ Tidak ada data absen hari ini. PDF tidak akan dibuat.");
-    return null; // Jangan lanjutkan jika tidak ada data
+    console.log(
+      "❌ Tidak ada data absen hari ini. File Excel tidak akan dibuat."
+    );
+    return null;
   }
 
   try {
-    const doc = new PDFDocument();
-    const filePath = `./rekap_absen_${currentDate}.pdf`;
+    const filePath = `./rekap_absen_${currentDate}.xlsx`;
 
-    await new Promise((resolve, reject) => {
-      const stream = fs.createWriteStream(filePath);
-      doc.pipe(stream);
+    // Buat array data untuk sheet
+    const data = [["User ID", "Nama", "Status", "Tanggal", "Alasan"]];
 
-      doc.fontSize(18).text("Rekap Absen Harian", { align: "center" });
-      doc.moveDown();
-      doc.fontSize(14).text(`Tanggal: ${currentDate}`, { align: "center" });
-      doc.moveDown();
-
-      Object.entries(absen).forEach(([id, data]) => {
-        doc.text(
-          `- <@${id}>: ${data.status} ${data.alasan ? `(${data.alasan})` : ""}`
-        );
-      });
-
-      doc.end();
-
-      stream.on("finish", () => {
-        console.log("✅ PDF berhasil dibuat:", filePath);
-        resolve();
-      });
-
-      stream.on("error", (err) => {
-        console.error("❌ Error saat membuat PDF:", err);
-        reject(err);
-      });
+    Object.entries(absen).forEach(([id, info]) => {
+      data.push([
+        id, // User ID
+        `<@${id}>`, // Nama Discord
+        info.status, // Status Hadir/Izin/Tidak Hadir
+        info.date, // Tanggal Absen
+        info.alasan || "-", // Alasan jika ada
+      ]);
     });
+
+    // Buat worksheet dan workbook
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absen");
+
+    // Simpan ke file
+    XLSX.writeFile(wb, filePath);
+    console.log("✅ File Excel berhasil dibuat:", filePath);
 
     return filePath;
   } catch (error) {
-    console.error("❌ Gagal membuat PDF:", error);
+    console.error("❌ Gagal membuat file Excel:", error);
     return null;
   }
 };
@@ -162,26 +157,20 @@ const generatePDFRekap = async () => {
 // Kirim rekap absen ke channel
 const kirimRekapAbsen = async () => {
   try {
-    const pdfFilePath = await generatePDFRekap();
+    const excelFilePath = await generateExcelRekap();
 
-    if (!pdfFilePath) {
-      console.error("❌ PDF tidak dibuat karena tidak ada data absen.");
+    if (!excelFilePath) {
+      console.error("❌ File Excel tidak dibuat karena tidak ada data absen.");
       return;
     }
 
-    if (!fs.existsSync(pdfFilePath)) {
-      console.error("❌ File PDF tidak ditemukan.");
+    if (!fs.existsSync(excelFilePath)) {
+      console.error("❌ File Excel tidak ditemukan.");
       return;
     }
 
-    const pdfBuffer = fs.readFileSync(pdfFilePath);
-    if (!pdfBuffer || pdfBuffer.length === 0) {
-      console.error("❌ File PDF kosong atau gagal dibaca.");
-      return;
-    }
-
-    const attachment = new AttachmentBuilder(pdfBuffer, {
-      name: `rekap_absen_${currentDate}.pdf`,
+    const attachment = new AttachmentBuilder(excelFilePath, {
+      name: `rekap_absen_${currentDate}.xlsx`,
     });
 
     const channel = client.channels.cache.get(absenChannelId);
@@ -191,18 +180,19 @@ const kirimRekapAbsen = async () => {
     }
 
     await channel.send({
-      content: "📄 **Berikut adalah rekap absen hari ini:**",
+      content: "📊 **Berikut adalah rekap absen dalam format Excel:**",
       files: [attachment],
     });
 
-    console.log("✅ Rekap absen berhasil dikirim.");
+    console.log("✅ Rekap absen dalam Excel berhasil dikirim.");
 
-    fs.unlink(pdfFilePath, (err) => {
+    // Hapus file setelah dikirim
+    fs.unlink(excelFilePath, (err) => {
       if (err) console.error("❌ Gagal menghapus file:", err);
-      else console.log("🗑️ File PDF dihapus setelah dikirim.");
+      else console.log("🗑️ File Excel dihapus setelah dikirim.");
     });
   } catch (error) {
-    console.error("❌ Gagal mengirim file:", error);
+    console.error("❌ Gagal mengirim file Excel:", error);
   }
 };
 
