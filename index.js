@@ -174,8 +174,8 @@ const kirimRekapAbsen = async () => {
 
     console.log("✅ File PDF ditemukan:", pdfFilePath);
 
-    // Membaca file sebagai buffer
-    const pdfBuffer = await fs.promises.readFile(pdfFilePath);
+    // Membaca file sebagai buffer dengan metode yang lebih aman
+    const pdfBuffer = fs.readFileSync(pdfFilePath);
 
     // Pastikan buffer tidak kosong
     if (!pdfBuffer || pdfBuffer.length === 0) {
@@ -183,7 +183,8 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    const attachment = new AttachmentBuilder(pdfBuffer, {
+    // Gunakan Buffer.from() agar data selalu valid
+    const attachment = new AttachmentBuilder(Buffer.from(pdfBuffer), {
       name: `rekap_absen_${currentDate}.pdf`,
     });
 
