@@ -157,14 +157,22 @@ const kirimRekapAbsen = async () => {
   try {
     const pdfFilePath = await generatePDFRekap();
 
-    // Pastikan file ada sebelum dibaca
+    // Pastikan file benar-benar ada sebelum melanjutkan
     if (!fs.existsSync(pdfFilePath)) {
       console.error("❌ File PDF tidak ditemukan.");
       return;
     }
 
-    const pdfBuffer = await fs.promises.readFile(pdfFilePath); // Baca file dengan benar
+    // Baca file sebagai buffer
+    const pdfBuffer = await fs.promises.readFile(pdfFilePath);
 
+    // Pastikan buffer tidak kosong
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      console.error("❌ File PDF kosong atau gagal dibaca.");
+      return;
+    }
+
+    // Kirim file ke channel Discord
     const channel = client.channels.cache.get(absenChannelId);
     if (channel) {
       const attachment = new AttachmentBuilder(pdfBuffer, {
