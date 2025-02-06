@@ -218,7 +218,6 @@ const kirimRekapAbsen = async () => {
 
     console.log(`✅ Rekap absen untuk ${currentDate} berhasil dikirim.`);
 
-    // Hapus file setelah dikirim untuk menghindari penyimpanan yang tidak perlu
     fs.unlinkSync(pdfPath);
   } catch (error) {
     console.error("❌ Gagal membuat/mengirim PDF:", error);
