@@ -1,8 +1,6 @@
 require("dotenv").config();
 const moment = require("moment-timezone");
-const { Client, GatewayIntentBits, AttachmentBuilder } = require("discord.js");
-const fs = require("fs");
-const XLSX = require("xlsx");
+const { Client, GatewayIntentBits } = require("discord.js");
 
 // Setup client bot
 const client = new Client({
@@ -27,10 +25,11 @@ let absen = {};
 let currentDate = getTodayDate();
 
 const isAbsensiValid = () => {
-  return true;
+  const now = moment().tz("Asia/Jakarta");
+  return now.hour() >= 8 && now.hour() < 9; // Absensi valid antara jam 8 hingga 9 pagi WIB
 };
 
-const isBeforeAbsensiTime = () => false; // Sebelum jam 8 pagi WIB
+const isBeforeAbsensiTime = () => moment().tz("Asia/Jakarta").hour() < 8; // Sebelum jam 8 pagi WIB
 
 const resetAbsenJikaHariBerganti = async () => {
   const today = getTodayDate();
@@ -113,65 +112,23 @@ const handleCekAbsen = (message) => {
   message.channel.send(`📋 **Daftar Absen:**\n${daftarAbsen}`);
 };
 
-// Fungsi untuk membuat PDF rekap absen
-const generateExcelRekap = async () => {
-  if (Object.keys(absen).length === 0) {
-    console.log(
-      "❌ Tidak ada data absen hari ini. File Excel tidak akan dibuat."
-    );
-    return null;
-  }
-
-  try {
-    const filePath = `./rekap_absen_${currentDate}.xlsx`;
-
-    // Buat array data untuk sheet
-    const data = [["User ID", "Nama", "Status", "Tanggal", "Alasan"]];
-
-    Object.entries(absen).forEach(([id, info]) => {
-      data.push([
-        id, // User ID
-        `<@${id}>`, // Nama Discord
-        info.status, // Status Hadir/Izin/Tidak Hadir
-        info.date, // Tanggal Absen
-        info.alasan || "-", // Alasan jika ada
-      ]);
-    });
-
-    // Buat worksheet dan workbook
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Rekap Absen");
-
-    // Simpan ke file
-    XLSX.writeFile(wb, filePath);
-    console.log("✅ File Excel berhasil dibuat:", filePath);
-
-    return filePath;
-  } catch (error) {
-    console.error("❌ Gagal membuat file Excel:", error);
-    return null;
-  }
-};
-
-// Kirim rekap absen ke channel
+// Kirim rekap absen ke channel dalam bentuk chat
 const kirimRekapAbsen = async () => {
   try {
-    const excelFilePath = await generateExcelRekap();
-
-    if (!excelFilePath) {
-      console.error("❌ File Excel tidak dibuat karena tidak ada data absen.");
+    if (Object.keys(absen).length === 0) {
+      console.log("❌ Tidak ada data absen hari ini.");
       return;
     }
 
-    if (!fs.existsSync(excelFilePath)) {
-      console.error("❌ File Excel tidak ditemukan.");
-      return;
-    }
-
-    const attachment = new AttachmentBuilder(excelFilePath, {
-      name: `rekap_absen_${currentDate}.xlsx`,
-    });
+    const daftarAbsen =
+      Object.entries(absen)
+        .map(
+          ([id, data]) =>
+            `<@${id}>: ${data.status} (${data.date})${
+              data.alasan ? ` - Alasan: ${data.alasan}` : ""
+            }`
+        )
+        .join("\n") || "Belum ada yang absen. Ayo, ikut absen sekarang! 😎";
 
     const channel = client.channels.cache.get(absenChannelId);
     if (!channel) {
@@ -180,19 +137,12 @@ const kirimRekapAbsen = async () => {
     }
 
     await channel.send({
-      content: "📊 **Berikut adalah rekap absen dalam format Excel:**",
-      files: [attachment],
+      content: `📋 **Daftar Absen Hari Ini:**\n${daftarAbsen}`,
     });
 
-    console.log("✅ Rekap absen dalam Excel berhasil dikirim.");
-
-    // Hapus file setelah dikirim
-    fs.unlink(excelFilePath, (err) => {
-      if (err) console.error("❌ Gagal menghapus file:", err);
-      else console.log("🗑️ File Excel dihapus setelah dikirim.");
-    });
+    console.log("✅ Rekap absen berhasil dikirim.");
   } catch (error) {
-    console.error("❌ Gagal mengirim file Excel:", error);
+    console.error("❌ Gagal mengirim rekap absen:", error);
   }
 };
 
