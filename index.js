@@ -116,87 +116,51 @@ const handleCekAbsen = (message) => {
 // Fungsi untuk membuat PDF rekap absen
 const generatePDFRekap = () => {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 50 });
+    const doc = new PDFDocument();
     const filePath = `rekap_absen_${currentDate}.pdf`;
     const stream = fs.createWriteStream(filePath);
-
     doc.pipe(stream);
-
-    // Header
-    doc.fillColor("#007bff").fontSize(20).text("Rekap Absen Harian", {
-      align: "center",
-    });
-    doc.moveDown(0.5);
-    doc.fillColor("black").fontSize(14).text(`Tanggal: ${currentDate}`, {
-      align: "center",
-    });
-
-    doc.moveDown(1);
-
+    doc.fontSize(20).text("Rekap Absen Harian", { align: "center" }).moveDown();
+    doc
+      .fontSize(14)
+      .text(`Tanggal: ${currentDate}`, { align: "center" })
+      .moveDown(2);
     if (Object.keys(absen).length === 0) {
-      doc.fontSize(12).text("⚠️ Belum ada data absen hari ini.", {
-        align: "center",
-      });
+      doc
+        .fontSize(12)
+        .text("Belum ada data absen hari ini.", { align: "center" });
     } else {
-      doc.fontSize(12).text("📌 Daftar Kehadiran:", { underline: true });
-      doc.moveDown(0.5);
-
-      Object.entries(absen).forEach(([id, data], index) => {
-        if (index % 2 === 0) {
-          doc
-            .rect(50, doc.y - 2, 500, 20)
-            .fill("#f0f0f0")
-            .stroke();
-        }
-        doc.fillColor("black");
-
-        doc.text(
-          `👤 ${id} | 📅 ${data.date} | ✅ Status: ${data.status} ${
-            data.alasan ? `| 📝 Alasan: ${data.alasan}` : ""
-          }`,
-          55,
-          doc.y + 3
-        );
+      Object.entries(absen).forEach(([id, data]) => {
+        doc
+          .fontSize(12)
+          .text(
+            `👤 ${data.name} (${id}) | ${data.status} | ${data.date} ${
+              data.alasan ? `| Alasan: ${data.alasan}` : ""
+            }`
+          );
         doc.moveDown();
       });
     }
-
     doc.end();
-
-    stream.on("finish", () => {
-      console.log("✅ PDF berhasil dibuat:", filePath);
-      resolve(filePath);
-    });
-
-    stream.on("error", (err) => {
-      console.error("❌ Gagal membuat PDF:", err);
-      reject(err);
-    });
+    stream.on("finish", () => resolve(filePath));
+    stream.on("error", reject);
   });
 };
 
 // Kirim rekap absen ke channel
 const kirimRekapAbsen = async () => {
   try {
-    // Membuat PDF rekap absen
     const pdfFilePath = await generatePDFRekap();
-
-    // Membaca file PDF yang telah dibuat
     const pdfFile = fs.readFileSync(pdfFilePath);
-
-    // Mengirim PDF ke channel
     const channel = client.channels.cache.get(absenChannelId);
     if (channel) {
       const attachment = new AttachmentBuilder(pdfFile, {
         name: `rekap_absen_${currentDate}.pdf`,
       });
       await channel.send({
-        content: "📄 **Berikut adalah rekap absen hari ini:**",
+        content: "📄 **Rekap Absen Hari Ini:**",
         files: [attachment],
       });
-      console.log("✅ Rekap absen berhasil dikirim.");
-    } else {
-      console.error("❌ Gagal mendapatkan channel.");
     }
   } catch (error) {
     console.error("❌ Gagal mengirim rekap absen:", error);
