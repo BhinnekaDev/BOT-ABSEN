@@ -157,7 +157,7 @@ const kirimRekapAbsen = async () => {
   try {
     const pdfFilePath = await generatePDFRekap();
 
-    // Pastikan file benar-benar ada sebelum melanjutkan
+    // Pastikan file benar-benar ada sebelum mengirim
     if (!fs.existsSync(pdfFilePath)) {
       console.error("❌ File PDF tidak ditemukan.");
       return;
@@ -169,34 +169,28 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    // **SOLUSI: Gunakan fs.readFile untuk memastikan file bisa diakses**
-    fs.readFile(pdfFilePath, async (err, data) => {
-      if (err) {
-        console.error("❌ Gagal membaca file PDF:", err);
-        return;
-      }
+    // **SOLUSI: Gunakan Buffer untuk membaca file sebelum dikirim**
+    const fileBuffer = fs.readFileSync(pdfFilePath);
+    if (!fileBuffer || fileBuffer.length === 0) {
+      console.error("❌ File PDF kosong atau gagal dibaca.");
+      return;
+    }
 
-      try {
-        // Kirim file dengan path langsung
-        const attachment = new AttachmentBuilder(pdfFilePath, {
-          name: `rekap_absen_${currentDate}.pdf`,
-        });
-
-        await channel.send({
-          content: "📄 **Berikut adalah rekap absen hari ini:**",
-          files: [attachment],
-        });
-
-        console.log("✅ Rekap absen berhasil dikirim.");
-
-        // **Hapus file setelah dikirim**
-        await fs.promises.unlink(pdfFilePath);
-      } catch (sendError) {
-        console.error("❌ Gagal mengirim file:", sendError);
-      }
+    const attachment = new AttachmentBuilder(fileBuffer, {
+      name: `rekap_absen_${currentDate}.pdf`,
     });
+
+    await channel.send({
+      content: "📄 **Berikut adalah rekap absen hari ini:**",
+      files: [attachment],
+    });
+
+    console.log("✅ Rekap absen berhasil dikirim.");
+
+    // **Hapus file setelah dikirim**
+    await fs.promises.unlink(pdfFilePath);
   } catch (error) {
-    console.error("❌ Gagal membuat rekap absen:", error);
+    console.error("❌ Gagal mengirim file:", error);
   }
 };
 
