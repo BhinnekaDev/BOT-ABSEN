@@ -119,31 +119,29 @@ const generatePDFRekap = () => {
     const doc = new PDFDocument();
     const filePath = `rekap_absen_${currentDate}.pdf`;
     const stream = fs.createWriteStream(filePath);
+
     doc.pipe(stream);
-    doc.fontSize(20).text("Rekap Absen Harian", { align: "center" }).moveDown();
-    doc
-      .fontSize(14)
-      .text(`Tanggal: ${currentDate}`, { align: "center" })
-      .moveDown(2);
+
+    // Header PDF
+    doc.fontSize(18).text("Rekap Absen Harian", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(14).text(`Tanggal: ${currentDate}`, { align: "center" });
+    doc.moveDown();
+
     if (Object.keys(absen).length === 0) {
-      doc
-        .fontSize(12)
-        .text("Belum ada data absen hari ini.", { align: "center" });
+      doc.text("Belum ada data absen hari ini.", { align: "center" });
     } else {
       Object.entries(absen).forEach(([id, data]) => {
-        doc
-          .fontSize(12)
-          .text(
-            `👤 ${data.name} (${id}) | ${data.status} | ${data.date} ${
-              data.alasan ? `| Alasan: ${data.alasan}` : ""
-            }`
-          );
-        doc.moveDown();
+        doc.text(
+          `- ${id}: ${data.status} ${data.alasan ? `(${data.alasan})` : ""}`
+        );
       });
     }
+
     doc.end();
+
     stream.on("finish", () => resolve(filePath));
-    stream.on("error", reject);
+    stream.on("error", (err) => reject(err));
   });
 };
 
@@ -151,16 +149,22 @@ const generatePDFRekap = () => {
 const kirimRekapAbsen = async () => {
   try {
     const pdfFilePath = await generatePDFRekap();
-    const pdfFile = fs.readFileSync(pdfFilePath);
+    const pdfBuffer = await fs.promises.readFile(pdfFilePath);
+
     const channel = client.channels.cache.get(absenChannelId);
     if (channel) {
-      const attachment = new AttachmentBuilder(pdfFile, {
+      const attachment = new AttachmentBuilder(pdfBuffer, {
         name: `rekap_absen_${currentDate}.pdf`,
       });
+
       await channel.send({
-        content: "📄 **Rekap Absen Hari Ini:**",
+        content: "📄 **Berikut adalah rekap absen hari ini:**",
         files: [attachment],
       });
+
+      console.log("✅ Rekap absen berhasil dikirim.");
+    } else {
+      console.error("❌ Gagal mendapatkan channel.");
     }
   } catch (error) {
     console.error("❌ Gagal mengirim rekap absen:", error);
