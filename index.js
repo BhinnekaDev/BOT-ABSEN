@@ -140,8 +140,15 @@ const generatePDFRekap = () => {
 
     doc.end();
 
-    stream.on("finish", () => resolve(filePath));
-    stream.on("error", (err) => reject(err));
+    stream.on("finish", () => {
+      console.log(`✅ PDF berhasil dibuat: ${filePath}`);
+      resolve(filePath);
+    });
+
+    stream.on("error", (err) => {
+      console.error("❌ Gagal membuat PDF:", err);
+      reject(err);
+    });
   });
 };
 
@@ -149,7 +156,14 @@ const generatePDFRekap = () => {
 const kirimRekapAbsen = async () => {
   try {
     const pdfFilePath = await generatePDFRekap();
-    const pdfBuffer = await fs.promises.readFile(pdfFilePath);
+
+    // Pastikan file ada sebelum dibaca
+    if (!fs.existsSync(pdfFilePath)) {
+      console.error("❌ File PDF tidak ditemukan.");
+      return;
+    }
+
+    const pdfBuffer = await fs.promises.readFile(pdfFilePath); // Baca file dengan benar
 
     const channel = client.channels.cache.get(absenChannelId);
     if (channel) {
@@ -163,6 +177,9 @@ const kirimRekapAbsen = async () => {
       });
 
       console.log("✅ Rekap absen berhasil dikirim.");
+
+      // Hapus file setelah dikirim untuk menghindari penumpukan file
+      await fs.promises.unlink(pdfFilePath);
     } else {
       console.error("❌ Gagal mendapatkan channel.");
     }
