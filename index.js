@@ -35,6 +35,7 @@ const resetAbsenJikaHariBerganti = async () => {
   const today = getTodayDate();
   if (today !== currentDate) {
     await kirimRekapAbsen(); // Kirim rekap sebelum reset
+    await hapusPesanKecualiRekap(); // Hapus semua pesan kecuali rekap
     currentDate = today;
     absen = {}; // Reset data absen
   }
@@ -120,6 +121,10 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
+    const tanggalHariIni = moment()
+      .tz("Asia/Jakarta")
+      .format("dddd, D MMMM YYYY");
+
     const daftarAbsen =
       Object.entries(absen)
         .map(
@@ -137,12 +142,42 @@ const kirimRekapAbsen = async () => {
     }
 
     await channel.send({
-      content: `📋 **Daftar Absen Hari Ini:**\n${daftarAbsen}`,
+      content: `📋 **Rekap Absen (${tanggalHariIni}):**\n${daftarAbsen}`,
     });
 
-    console.log("✅ Rekap absen berhasil dikirim.");
+    console.log(`✅ Rekap absen berhasil dikirim (${tanggalHariIni}).`);
   } catch (error) {
     console.error("❌ Gagal mengirim rekap absen:", error);
+  }
+};
+
+// Hapus semua pesan kecuali rekap
+const hapusPesanKecualiRekap = async () => {
+  try {
+    const channel = client.channels.cache.get(absenChannelId);
+    if (!channel) {
+      console.error("❌ Gagal mendapatkan channel.");
+      return;
+    }
+
+    // Ambil pesan terakhir dari channel
+    const messages = await channel.messages.fetch({ limit: 100 });
+    const rekapPesan = messages.find((msg) =>
+      msg.content.startsWith("📋 **Rekap Absen")
+    );
+
+    // Hapus semua pesan kecuali rekap
+    const pesanUntukDihapus = messages.filter(
+      (msg) => !rekapPesan || msg.id !== rekapPesan.id
+    );
+
+    for (const msg of pesanUntukDihapus.values()) {
+      await msg.delete();
+    }
+
+    console.log("✅ Semua pesan dihapus, kecuali rekap absen.");
+  } catch (error) {
+    console.error("❌ Gagal menghapus pesan:", error);
   }
 };
 
