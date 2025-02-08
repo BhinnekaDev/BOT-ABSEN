@@ -35,7 +35,7 @@ const resetAbsenJikaHariBerganti = async () => {
   const today = getTodayDate();
   if (today !== currentDate) {
     await kirimRekapAbsen(); // Kirim rekap sebelum reset
-    await hapusPesanKecualiRekap(); // Hapus semua pesan kecuali rekap
+    await hapusPesanKecualiRekap(); // Hapus semua pesan kecuali rekap terbaru
     currentDate = today;
     absen = {}; // Reset data absen
   }
@@ -160,13 +160,12 @@ const hapusPesanKecualiRekap = async () => {
       return;
     }
 
-    // Ambil pesan terakhir dari channel
     const messages = await channel.messages.fetch({ limit: 100 });
-    const rekapPesan = messages.find((msg) =>
-      msg.content.startsWith("📋 **Rekap Absen")
-    );
+    const rekapPesan = messages
+      .filter((msg) => msg.content.startsWith("📋 **Rekap Absen"))
+      .sort((a, b) => b.createdTimestamp - a.createdTimestamp)
+      .first(); // Ambil rekap terbaru
 
-    // Hapus semua pesan kecuali rekap
     const pesanUntukDihapus = messages.filter(
       (msg) => !rekapPesan || msg.id !== rekapPesan.id
     );
@@ -175,7 +174,7 @@ const hapusPesanKecualiRekap = async () => {
       await msg.delete();
     }
 
-    console.log("✅ Semua pesan dihapus, kecuali rekap absen.");
+    console.log("✅ Semua pesan dihapus, kecuali rekap absen terbaru.");
   } catch (error) {
     console.error("❌ Gagal menghapus pesan:", error);
   }
