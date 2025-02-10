@@ -121,8 +121,9 @@ const kirimRekapAbsen = async () => {
       return;
     }
 
-    const tanggalHariIni = moment()
+    const tanggalKemarin = moment()
       .tz("Asia/Jakarta")
+      .subtract(1, "day")
       .format("dddd, D MMMM YYYY");
 
     const daftarAbsen =
@@ -142,10 +143,10 @@ const kirimRekapAbsen = async () => {
     }
 
     await channel.send({
-      content: `📋 **Rekap Absen (${tanggalHariIni}):**\n${daftarAbsen}`,
+      content: `📋 **Rekap Absen (${tanggalKemarin}):**\n${daftarAbsen}`,
     });
 
-    console.log(`✅ Rekap absen berhasil dikirim (${tanggalHariIni}).`);
+    console.log(`✅ Rekap absen berhasil dikirim (${tanggalKemarin}).`);
   } catch (error) {
     console.error("❌ Gagal mengirim rekap absen:", error);
   }
