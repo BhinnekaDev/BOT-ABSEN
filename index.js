@@ -1,6 +1,8 @@
 require("dotenv").config();
+require("moment/locale/id");
 const moment = require("moment-timezone");
 const { Client, GatewayIntentBits } = require("discord.js");
+moment.locale("id");
 
 // Setup client bot
 const client = new Client({
