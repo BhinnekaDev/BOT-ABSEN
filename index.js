@@ -1,8 +1,9 @@
 require("dotenv").config();
-require("moment/locale/id");
-const moment = require("moment-timezone");
+const moment = require("moment-timezone"); // Require moment lebih awal
+require("moment/locale/id"); // Load locale Indonesia
+moment.locale("id"); // Set locale ke bahasa Indonesia
+
 const { Client, GatewayIntentBits } = require("discord.js");
-moment.locale("id");
 
 // Setup client bot
 const client = new Client({
