@@ -22,7 +22,8 @@ const absenChannelId = "1336579807919734795"; // Ganti dengan ID channel Anda
 
 // Utility Functions
 const getTodayDate = () => moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-const getCurrentTime = () => moment().tz("Asia/Jakarta").format("HH:mm WIB");
+const getCurrentTime = () => moment().tz("Asia/Jakarta").format("HH:mm:ss WIB");
+const getCurrentDay = () => moment().tz("Asia/Jakarta").format("dddd");
 
 // Menyimpan data absen
 let absen = {};
@@ -34,6 +35,7 @@ const isAbsensiValid = () => {
 };
 
 const isBeforeAbsensiTime = () => moment().tz("Asia/Jakarta").hour() < 8; // Sebelum jam 8 pagi WIB
+const isWeekend = () => ["Sabtu", "Minggu"].includes(getCurrentDay()); // Jika hari ini adalah Sabtu atau Minggu
 
 const resetAbsenJikaHariBerganti = async () => {
     const today = getTodayDate();
@@ -46,6 +48,8 @@ const resetAbsenJikaHariBerganti = async () => {
 };
 
 const kirimNotifikasiAbsen = () => {
+    if (isWeekend()) return; // Tidak mengirimkan notifikasi jika hari ini Sabtu atau Minggu
+
     const channel = client.channels.cache.get(absenChannelId);
     if (channel) {
         channel.send(
@@ -61,6 +65,11 @@ const kirimNotifikasiAbsen = () => {
 
 const handleAbsen = (message) => {
     message.delete();
+    if (isWeekend()) {
+        return message.channel.send(
+            `🚫 **Hari ini adalah ${getCurrentDay()} dan tidak ada absen! Nikmati liburan Anda!**`
+        );
+    }
     if (isBeforeAbsensiTime()) {
         return message.channel.send(
             `⏳ **Silakan tunggu hingga jam 8 pagi** untuk absen! 😊`
@@ -75,7 +84,7 @@ const handleAbsen = (message) => {
             waktu: waktuAbsen,
         };
         message.channel.send(
-            `🎉 **Yeay!** ${message.author} telah berhasil absen hadir pada ${waktuAbsen}! 🚀 Terima kasih sudah bergabung hari ini! 😊`
+            `🎉 **Yeay!** ${message.author} telah berhasil absen pada ${waktuAbsen}. 🚀 Terima kasih sudah bergabung hari ini! 😊`
         );
     } else {
         absen[message.author.id] = {
