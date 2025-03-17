@@ -22,7 +22,8 @@ const absenChannelId = "1336579807919734795"; // Ganti dengan ID channel Anda
 
 // Utility Functions
 const getTodayDate = () => moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-const getCurrentTime = () => moment().tz("Asia/Jakarta").format("HH:mm:ss WIB");
+const getCurrentTime = () =>
+    moment().tz("Asia/Jakarta").format("HH:mm:ss") + " WIB";
 const getCurrentDay = () => moment().tz("Asia/Jakarta").format("dddd");
 
 // Menyimpan data absen
