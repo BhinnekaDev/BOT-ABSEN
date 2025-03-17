@@ -141,7 +141,7 @@ const handleCekAbsen = (message) => {
         Object.entries(absen)
             .map(
                 ([id, data]) =>
-                    `<@${id}>: ${data.status} (${data.date})${
+                    `<@${id}>: ${data.status} (${data.date} - ${data.waktu})${
                         data.alasan ? ` - Alasan: ${data.alasan}` : ""
                     }`
             )
